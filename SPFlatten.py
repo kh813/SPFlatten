@@ -47,7 +47,7 @@ def main():
 
         flatten_spf(root_domain)
 
-        dedupe_spf_ip_list = list(set(spf_ip_list))
+        dedupe_spf_ip_list = uniq(spf_ip_list)
 
         flat_spf = "v=spf1"
         for ip in dedupe_spf_ip_list:
@@ -64,13 +64,22 @@ def main():
         print("#### Flattened SPF for %s ####\n----------------------\n%s\n" % (root_domain, flat_spf))
 
 
+# remove duplicates from list while preserving ordering
+def uniq(in_list):
+    out_list = []
+    for elem in in_list:
+        if elem not in out_list:
+            out_list.append(elem)
+    return out_list
+
+
 # Recursively flatten the SPF record for the specified domain
 def flatten_spf(domain):
     global all_mechanism
 
     debug("--- Flattening:", domain, "---")
     try:
-        txt_records = dns.resolver.query(domain, "TXT")
+        txt_records = dns.resolver.resolve(domain, "TXT")
     except dns.exception.DNSException:
         debug("No TXT records for:", domain)
         return
@@ -134,7 +143,7 @@ def parse_mechanism(mechanism, domain):
 # Convert A/AAAA records to IPs and adds them to the SPF master list
 def convert_domain_to_ipv4(domain):
     try:
-        a_records = dns.resolver.query(domain, "A")
+        a_records = dns.resolver.resolve(domain, "A")
         for ip in a_records:
             debug("A record for", domain, ":", str(ip))
             spf_ip_list.append(str(ip))
@@ -142,7 +151,7 @@ def convert_domain_to_ipv4(domain):
         pass
 
     try:
-        aaaa_records = dns.resolver.query(domain, "AAAA")
+        aaaa_records = dns.resolver.resolve(domain, "AAAA")
         for ip in aaaa_records:
             debug("A record for", domain, ":", str(ip))
             spf_ip_list.append(str(ip))
@@ -153,7 +162,7 @@ def convert_domain_to_ipv4(domain):
 # Convert MX records to IPs and adds them to the SPF master list
 def convert_mx_to_ipv4(domain):
     try:
-        mx_records = dns.resolver.query(domain, "MX")
+        mx_records = dns.resolver.resolve(domain, "MX")
     except dns.exception.DNSException:
         import pdb
         pdb.set_trace()
